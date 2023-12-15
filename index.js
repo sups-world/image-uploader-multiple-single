@@ -1,21 +1,65 @@
 import express from "express";
-import { upload } from "./middleware/uploader.js";
+import { upload, uploadMultiple } from "./middleware/uploader.js";
 
 const app = express();
 
+const maxNoFiles = 2;
+
+//for single upload
 const logoUpload = upload.single("image");
-app.post("/test/upload-logo", (req, res) => {
-  logoUpload(req, res, (err) => {
+app.post("/test/upload-logo", async (req, res) => {
+  logoUpload(req, res, async (err) => {
     if (err) {
       console.log(`I am here:::`, err);
       if (err.code === "LIMIT_FILE_SIZE") {
         return res.status(400).send("file size exceeds maximum limit");
       }
+
       console.log(err.message);
       return res.status(400).send({ error: err.message });
     }
-    console.log("path to the file::", req.file.path);
-    return res.status(200).send("file uploaded successfully");
+    console.log(req.file);
+  });
+  console.log("path to the file::", req.file.path);
+  console.log("I am here");
+  return res.status(200).send("file uploaded successfully");
+});
+
+//for multiple upload
+const imagesUpload = uploadMultiple.array("images", maxNoFiles);
+app.post("/test/upload-multiple-images", async (req, res) => {
+  imagesUpload(req, res, async (err) => {
+    if (err) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).send("file size exceeds maximum limit");
+      }
+      if (err.code === "LIMIT_UNEXPECTED_FILE") {
+        return res
+          .status(400)
+          .send(`unable to upload more than ${maxNoFiles} files`);
+      }
+      console.log("I am here::", err);
+      console.log(err.message);
+      return res.status(400).send({ error: err.message });
+    }
+    // if (!req.file) {
+    //   return res.status(400).send("no files selected for upload");
+    // }
+
+    //  When no error occurs:::
+    if (!err) {
+      if (req.files.length === 0) {
+        return res.status(400).send("No files selected for upload");
+      }
+      // console.log("paths to uploaded files::", req.files);
+
+      let arr1 = req.files;
+      arr1.forEach((a) => {
+        console.log("this is the path", a.path);
+        //storing paths to database done here
+      });
+      return res.status(200).send("files are uploaded successfully");
+    }
   });
 });
 
